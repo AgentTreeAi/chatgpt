@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Check-in · Remote-Team Mental Health Tracker{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  {% if invalid %}
+  <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+    We couldn't find that token. Ask your admin for a fresh link.
+  </div>
+  {% else %}
+  <div class="space-y-6">
+    <div class="space-y-2">
+      <h1 class="text-3xl font-semibold text-slate-900">How are you today?</h1>
+      <p class="text-sm text-slate-600">
+        This form is anonymous—your responses are only used in aggregated team insights.
+      </p>
+    </div>
+    {% if submitted %}
+    <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+      Thanks for sharing. Your input helps your teammates support one another.
+    </div>
+    {% endif %}
+    <form method="post" class="space-y-6">
+      <div>
+        <label for="mood" class="block text-sm font-medium text-slate-700">Mood</label>
+        <input
+          type="range"
+          min="1"
+          max="5"
+          value="3"
+          name="mood"
+          id="mood"
+          class="mt-2 w-full"
+        />
+        <div class="flex justify-between text-xs text-slate-500">
+          <span>😞 Low</span>
+          <span>😊 High</span>
+        </div>
+      </div>
+      <div>
+        <label for="stress" class="block text-sm font-medium text-slate-700">Stress</label>
+        <input
+          type="range"
+          min="1"
+          max="5"
+          value="3"
+          name="stress"
+          id="stress"
+          class="mt-2 w-full"
+        />
+        <div class="flex justify-between text-xs text-slate-500">
+          <span>😌 Calm</span>
+          <span>🔥 Overloaded</span>
+        </div>
+      </div>
+      <div>
+        <label for="workload" class="block text-sm font-medium text-slate-700">Workload balance</label>
+        <select id="workload" name="workload" class="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+          <option value="2">Sustainable</option>
+          <option value="1">Light</option>
+          <option value="3">Heavy</option>
+        </select>
+      </div>
+      <div>
+        <label for="comment" class="block text-sm font-medium text-slate-700">Anything you want us to know?</label>
+        <textarea
+          id="comment"
+          name="comment"
+          rows="4"
+          class="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          placeholder="Optional note for the leadership team"
+        ></textarea>
+      </div>
+      <div class="flex items-center justify-between text-xs text-slate-500">
+        <span>Token: {{ masked_token }}</span>
+        <span>{{ team_name }}</span>
+      </div>
+      <button
+        type="submit"
+        class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-500"
+      >
+        Submit check-in
+      </button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
