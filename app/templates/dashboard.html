@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · {{ team.name }}{% endblock %}
+{% block content %}
+<div class="space-y-8">
+  <header class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div>
+      <h1 class="text-3xl font-semibold text-slate-900">{{ team.name }} dashboard</h1>
+      <p class="text-sm text-slate-600">Aggregated check-ins from the last two weeks.</p>
+    </div>
+    <span class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium {% if risk_level == 'High' %}bg-rose-100 text-rose-700{% elif risk_level == 'Moderate' %}bg-amber-100 text-amber-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">
+      <span class="h-2 w-2 rounded-full {% if risk_level == 'High' %}bg-rose-500{% elif risk_level == 'Moderate' %}bg-amber-500{% else %}bg-emerald-500{% endif %}"></span>
+      Risk: {{ risk_level }}
+    </span>
+  </header>
+
+  <section class="grid gap-4 md:grid-cols-3">
+    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-xs uppercase tracking-wide text-slate-500">Avg mood</p>
+      <p class="mt-2 text-3xl font-semibold text-slate-900">{{ average_mood | round(1) }}</p>
+      <p class="text-xs text-slate-500">Target ≥ 3.5</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-xs uppercase tracking-wide text-slate-500">Avg stress</p>
+      <p class="mt-2 text-3xl font-semibold text-slate-900">{{ average_stress | round(1) }}</p>
+      <p class="text-xs text-slate-500">Target ≤ 3.0</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-xs uppercase tracking-wide text-slate-500">Participation</p>
+      <p class="mt-2 text-3xl font-semibold text-slate-900">{{ participation_rate | round(0) }}%</p>
+      <p class="text-xs text-slate-500">Past 7 days</p>
+    </div>
+  </section>
+
+  <section class="grid gap-6 lg:grid-cols-3">
+    <article class="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-slate-900">Mood vs. stress trend</h2>
+        <span class="text-xs text-slate-500">Daily average</span>
+      </div>
+      <canvas id="trendChart" class="mt-6 h-72 w-full"></canvas>
+    </article>
+    <aside class="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 class="text-lg font-semibold text-slate-900">Signals</h2>
+      <ul class="space-y-3 text-sm text-slate-600">
+        {% for signal in signals %}
+        <li class="flex gap-3">
+          <span class="mt-1 inline-flex h-2 w-2 flex-shrink-0 rounded-full {% if signal.status == 'critical' %}bg-rose-500{% elif signal.status == 'watch' %}bg-amber-500{% else %}bg-emerald-500{% endif %}"></span>
+          <span>{{ signal.message }}</span>
+        </li>
+        {% else %}
+        <li class="text-sm text-slate-500">No alerts — keep up the support!</li>
+        {% endfor %}
+      </ul>
+      <div class="rounded-lg bg-slate-50 p-4 text-xs text-slate-500">
+        Weekly Slack nudges keep participation strong. Configure channels under integrations.
+      </div>
+    </aside>
+  </section>
+
+  <section class="grid gap-6 lg:grid-cols-2">
+    <article class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 class="text-lg font-semibold text-slate-900">Latest anonymous notes</h2>
+      <ul class="mt-4 space-y-4 text-sm text-slate-600">
+        {% for item in latest_checkins %}
+        <li class="rounded-lg border border-slate-200 p-3">
+          <div class="flex justify-between text-xs text-slate-400">
+            <span>{{ item.submitted_at.strftime('%b %d, %Y') }}</span>
+            <span>Seat #{{ item.user_id }}</span>
+          </div>
+          <p class="mt-2 text-slate-700">{{ item.comment or 'No additional context shared.' }}</p>
+          <div class="mt-2 text-xs text-slate-500">Mood {{ item.mood }} · Stress {{ item.stress }}</div>
+        </li>
+        {% else %}
+        <li class="rounded-lg border border-dashed border-slate-200 p-6 text-center text-slate-400">No check-ins yet.</li>
+        {% endfor %}
+      </ul>
+    </article>
+    <article class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <h2 class="text-lg font-semibold text-slate-900">Active seats</h2>
+      <ul class="space-y-3 text-sm text-slate-600">
+        {% for seat in roster %}
+        <li class="flex items-center justify-between">
+          <span>Seat #{{ seat[0] }}</span>
+          <span class="text-xs text-slate-400">{{ seat[2] }} check-ins</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="text-xs text-slate-500">
+        New teammates? Share <code>{{ base_url }}/checkin/&lt;token&gt;</code> with them.
+      </div>
+    </article>
+  </section>
+</div>
+
+<script>
+  const chartConfig = {{ chart_config | tojson }};
+  const ctx = document.getElementById('trendChart');
+  if (ctx && chartConfig.labels.length) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartConfig.labels,
+        datasets: [
+          {
+            label: 'Mood',
+            data: chartConfig.mood,
+            borderColor: '#4f46e5',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            tension: 0.4,
+          },
+          {
+            label: 'Stress',
+            data: chartConfig.stress,
+            borderColor: '#f97316',
+            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+            tension: 0.4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            suggestedMin: 1,
+            suggestedMax: 5,
+          },
+        },
+      },
+    });
+  }
+</script>
+{% endblock %}

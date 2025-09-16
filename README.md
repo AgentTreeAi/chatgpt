@@ -1,55 +1,116 @@
 # Remote-Team Mental-Health Tracker (RMHT)
 
-Privacy-first micro-SaaS that collects anonymous mood/stress check-ins and shows team-level trends.
+RMHT is a privacy-first micro-SaaS that helps distributed teams spot burnout and celebrate wins without collecting PII. It combines anonymous weekly check-ins, org-scoped dashboards, Slack nudges, and Stripe billing into a Railway-ready service.
 
-## Features
-- ✅ FastAPI backend with Jinja templates and SQLite (swap for Postgres in prod)
-- ✅ Admin portal protected by `RMHT_ADMIN_TOKEN` to add teams and member tokens
-- ✅ Employee check-in form with emoji-inspired scales and optional notes
-- ✅ Dashboard with aggregated analytics, risk badge, Chart.js visualizations, and roster insights
-- ✅ Integration stubs for Slack, Microsoft Teams, calendars, and HRIS sync
+## Architecture
 
-## Tech stack
-- FastAPI + SQLAlchemy + SQLite (dev)
-- Jinja2 templates styled via Tailwind CSS CDN
-- Chart.js for mood/stress trends
+- **API:** FastAPI + Jinja templates (Python 3.11)
+- **Database:** Neon Postgres via SQLAlchemy 2.x ORM + Alembic migrations
+- **Auth:** Passwordless magic links powered by SendGrid and signed JWT nonces
+- **RBAC:** Roles (`org_admin`, `team_lead`, `employee`) enforced per-request with org isolation
+- **Integrations:** Slack OAuth install + bot messaging, Stripe subscriptions, Railway cron jobs
+- **Privacy:** Request ID middleware, JSON logs, cohort threshold (≥5), retention worker, EWMA-based risk scoring
 
-## Getting started
+## Prerequisites
+
+- Python 3.11
+- Postgres database (local Docker or Neon)
+- SendGrid, Slack, and Stripe sandbox credentials for full feature set
+
+## Quick start (local dev)
+
 ```bash
-# Install dependencies
-pip install fastapi uvicorn[standard] sqlalchemy jinja2 python-multipart
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
 
-# Run the development server
-uvicorn rmht_app.main:app --reload --port 8000
+# copy and edit environment
+cp .env.example .env
+# update DATABASE_URL, SECRET_KEY, etc.
+
+# run migrations
+alembic upgrade head
+
+# launch API
+uvicorn app.main:app --reload --port 8000
 ```
 
-Open <http://localhost:8000> to see the marketing home, dashboard demo, and admin link.
+Visit `http://localhost:8000/` for the marketing home, `/admin` for the org console (use the demo magic-link flow), and `/dashboard/1` for seeded analytics once the Postgres seed runs on startup.
+
+### Database migration commands
+
+```bash
+# autogenerate after editing models
+alembic revision --autogenerate -m "describe change"
+# apply latest
+alembic upgrade head
+```
+
+### Import existing SQLite demo data
+
+If you previously used the SQLite prototype, migrate the data once:
+
+```bash
+python scripts/import_sqlite.py
+```
+
+## Environment variables
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Postgres connection string (`postgresql+psycopg2://...`) |
+| `SECRET_KEY` | HMAC secret for JWT magic links and sessions |
+| `RMHT_ADMIN_TOKEN` | Legacy token for scripting (admins now use magic links) |
+| `SENDGRID_API_KEY` | SendGrid API key for passwordless emails |
+| `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | Slack OAuth credentials |
+| `STRIPE_SECRET_KEY` | Stripe API key (test mode) |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signature secret |
+| `STRIPE_PRICE_*` | Price IDs for Starter/Pro/Enterprise plans |
+| `APP_BASE_URL` | Public base URL used in links and Slack prompts |
+| `CRON_SECRET` | Shared secret for Railway cron job endpoints |
 
 ## Key routes
-- `/` – Home with product overview and demo shortcuts
-- `/checkin/{token}` – Anonymous employee check-in (use `demo-alex` for the sample data)
-- `/dashboard/{team_id}` – Aggregated charts and qualitative notes per team
-- `/admin?token=...` – Token-protected admin portal to create teams and tokens
-- `/healthz` – Lightweight health probe
 
-## Configuration
-Environment variables:
+| Route | Description |
+| --- | --- |
+| `/` | Marketing home and quick links |
+| `/checkin/{token}` | Anonymous employee form (seed token: `demo-token`) |
+| `/dashboard/{team_id}` | Aggregated analytics (requires ≥5 check-ins) |
+| `/auth/request-link` | Request magic link (POST `{ "email": "admin@example.com" }`) |
+| `/admin` | Org admin console (requires magic link session) |
+| `/integrations/slack/*` | Install + manage Slack bot |
+| `/billing/*` | Stripe checkout, portal, webhooks |
+| `/jobs/*` | Railway cron endpoints (weekly Slack prompts, retention, seat sync) |
+| `/healthz` | Lightweight uptime probe |
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `RMHT_ADMIN_TOKEN` | `changeme` | Token required for the admin portal |
-| `RMHT_DATABASE_URL` | `sqlite:///./rmht.db` | Database connection string |
+## Observability & privacy
 
-SQLite data is written to `rmht.db`. Add it to `.gitignore` for production deployments.
+- JSON-formatted logs with per-request IDs
+- CSRF-protected admin APIs via session token + header
+- Risk engine stores daily EWMA snapshots; raw check-ins purge per retention policy
+- Dashboard hides metrics until cohort threshold (5) satisfied
 
-## Demo data
-On first startup the app seeds a "Remote Success" team with three demo members (`demo-alex`, `demo-brook`, `demo-cam`) and recent check-ins so the dashboard renders immediately.
+## Testing
 
-## Next steps before launch
-- Replace SQLite with Postgres
-- Swap the admin token for OAuth/SAML and add audit logging
-- Connect Slack/Teams reminder hooks and Stripe for billing
-- Delete comments/sample data before moving to production
+```bash
+ruff check .
+mypy app  # optional
+pytest
+```
+
+GitHub Actions (`.github/workflows/`) run lint, type-check, pytest, build, and Railway deployment (when secrets exist).
+
+## Deployment
+
+The provided Dockerfile builds a slim Uvicorn image running as a non-root user. Build & push via `docker buildx` or let GitHub Actions publish to GHCR. Deployments trigger `railway up --ci` when `RAILWAY_TOKEN` is configured.
+
+## Roadmap
+
+- Microsoft Teams + calendar insights (currently stubs)
+- Stripe metered billing refinements for enterprise plans
+- Automated SOC2-ready logging and audit exports
 
 ## License
+
 MIT

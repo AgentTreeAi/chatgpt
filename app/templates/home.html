@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Remote-Team Mental Health Tracker{% endblock %}
+{% block content %}
+<section class="grid gap-8 items-start lg:grid-cols-2">
+  <div class="space-y-6">
+    <span class="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-1 text-sm font-medium text-emerald-700">Privacy-first pulse checks</span>
+    <h1 class="text-4xl font-bold text-slate-900">Understand how your distributed team is feeling—without sacrificing anonymity.</h1>
+    <p class="text-lg text-slate-600">RMHT gathers lightweight, anonymous check-ins and turns them into org-scoped dashboards with risk signals, participation alerts, and retention-safe analytics.</p>
+    <div class="flex flex-wrap gap-3">
+      <a href="/admin" class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-500">Launch admin console</a>
+      <a href="/checkin/demo-token" class="inline-flex items-center justify-center rounded-md border border-indigo-200 px-4 py-2 text-indigo-600 hover:bg-indigo-50">Preview check-in</a>
+    </div>
+    <dl class="grid gap-4 text-sm sm:grid-cols-3">
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <dt class="text-slate-500">Anonymous participation</dt>
+        <dd class="text-2xl font-semibold text-slate-900">Tokens only</dd>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <dt class="text-slate-500">Time to launch</dt>
+        <dd class="text-2xl font-semibold text-slate-900">&lt; 10 min</dd>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <dt class="text-slate-500">Integrations</dt>
+        <dd class="text-2xl font-semibold text-slate-900">Slack · Stripe</dd>
+      </div>
+    </dl>
+  </div>
+  <div class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-semibold text-slate-900">How it works</h2>
+    <ol class="space-y-3 text-slate-600">
+      <li class="flex gap-3">
+        <span class="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-600">1</span>
+        Org admins request a magic link (SendGrid) and set up roles per org.
+      </li>
+      <li class="flex gap-3">
+        <span class="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-600">2</span>
+        Employees submit weekly mood + stress in seconds from any device.
+      </li>
+      <li class="flex gap-3">
+        <span class="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-600">3</span>
+        Dashboards unlock when ≥5 respondents, with EWMA-based risk and Stripe-enforced entitlements.
+      </li>
+    </ol>
+    <div class="rounded-lg bg-indigo-50 p-4 text-sm text-indigo-700">Bring your own Neon Postgres + Railway deployment, then wire Slack reminders and Stripe billing through the provided services.</div>
+  </div>
+</section>
+
+<section class="mt-12 grid gap-6 md:grid-cols-2">
+  <article class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <h3 class="text-lg font-semibold text-slate-900">Employee experience</h3>
+    <p class="mt-2 text-sm text-slate-600">Employees see a minimalist form with emoji-inspired scales. No logins or cookies beyond sessionless tokens.</p>
+    <a href="/checkin/demo-token" class="mt-4 inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700">Try a demo check-in</a>
+  </article>
+  <article class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <h3 class="text-lg font-semibold text-slate-900">Admin controls</h3>
+    <p class="mt-2 text-sm text-slate-600">Create teams, invite seats, install the Slack bot, and sync billing—all scoped to your organization.</p>
+    <a href="/admin" class="mt-4 inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Review admin flow</a>
+  </article>
+</section>
+{% endblock %}

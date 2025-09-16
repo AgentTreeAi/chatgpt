@@ -2,8 +2,11 @@ __pycache__/
 *.pyc
 .env
 .env.*
+.venv/
 venv/
 .rmht_secret*
 rmht_app/*.db
 rmht.db
+alembic/versions/__pycache__/
+.pytest_cache/
 .DS_Store
