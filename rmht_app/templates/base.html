@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Remote-Team Mental Health Tracker{% endblock %}</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  </head>
+  <body class="bg-slate-50 text-slate-800 min-h-screen">
+    <header class="bg-white border-b border-slate-200">
+      <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <a href="{{ request.url_for('home') }}" class="text-lg font-semibold text-indigo-600">
+          {{ app_name }}
+        </a>
+        <nav class="flex items-center gap-4 text-sm">
+          <a href="{{ request.url_for('home') }}" class="hover:text-indigo-600">Home</a>
+          <a
+            href="{{ request.url_for('admin_portal') }}?token=changeme"
+            class="hover:text-indigo-600"
+            >Admin demo</a
+          >
+        </nav>
+      </div>
+    </header>
+    <main class="max-w-6xl mx-auto px-4 py-10">
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="border-t border-slate-200 bg-white mt-16">
+      <div class="max-w-6xl mx-auto px-4 py-6 text-sm text-slate-500">
+        Built for privacy-first team wellbeing check-ins. Tokens only, no PII.
+      </div>
+    </footer>
+  </body>
+</html>

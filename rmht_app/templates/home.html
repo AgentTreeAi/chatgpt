@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Home · Remote-Team Mental Health Tracker{% endblock %}
+{% block content %}
+<section class="grid gap-8 lg:grid-cols-2 items-start">
+  <div class="space-y-6">
+    <div class="inline-flex items-center gap-2 rounded-full bg-emerald-100 text-emerald-700 px-4 py-1 text-sm font-medium">
+      Privacy-first pulse checks
+    </div>
+    <h1 class="text-4xl font-bold text-slate-900">
+      Understand how your distributed team is feeling—without sacrificing anonymity.
+    </h1>
+    <p class="text-lg text-slate-600">
+      RMHT collects lightweight, anonymous check-ins and rolls them up into dashboards your leadership team can act on. No personal data stored, only tokens your employees can reset anytime.
+    </p>
+    <div class="flex flex-wrap gap-3">
+      {% if teams %}
+      <a
+        href="{{ request.url_for('dashboard', team_id=teams[0].id) }}"
+        class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-500"
+        >View sample dashboard</a
+      >
+      {% endif %}
+      <a
+        href="{{ request.url_for('admin_portal') }}?token=changeme"
+        class="inline-flex items-center justify-center rounded-md border border-indigo-200 px-4 py-2 text-indigo-600 hover:bg-indigo-50"
+        >Open admin demo</a
+      >
+    </div>
+    <dl class="grid gap-4 sm:grid-cols-3 text-sm">
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <dt class="text-slate-500">Anonymous participation</dt>
+        <dd class="text-2xl font-semibold text-slate-900">Tokens only</dd>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <dt class="text-slate-500">Time to launch</dt>
+        <dd class="text-2xl font-semibold text-slate-900">&lt; 10 min</dd>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <dt class="text-slate-500">Integrations ready</dt>
+        <dd class="text-2xl font-semibold text-slate-900">Slack · Teams</dd>
+      </div>
+    </dl>
+  </div>
+  <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+    <h2 class="text-xl font-semibold text-slate-900">How it works</h2>
+    <ol class="space-y-3 text-slate-600">
+      <li class="flex gap-3">
+        <span class="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-600">1</span>
+        Invite employees with a secure tokenized link. No email or name required.
+      </li>
+      <li class="flex gap-3">
+        <span class="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-600">2</span>
+        Collect weekly mood and stress scores with optional qualitative notes.
+      </li>
+      <li class="flex gap-3">
+        <span class="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-600">3</span>
+        Give leaders an aggregated dashboard with alerts when risk climbs.
+      </li>
+    </ol>
+    <div class="rounded-lg bg-indigo-50 p-4 text-sm text-indigo-700">
+      Want to push check-in reminders automatically? Use the integration stubs in
+      <code>integrations.py</code> to connect Slack, Teams, or your HRIS.
+    </div>
+  </div>
+</section>
+
+<section class="mt-12 grid gap-6 md:grid-cols-2">
+  <article class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <h3 class="text-lg font-semibold text-slate-900">Employee experience</h3>
+    <p class="mt-2 text-sm text-slate-600">
+      Employees only see a minimalist form with emoji-inspired scales. No login, no tracking pixels, just a friendly nudge to share how they are doing.
+    </p>
+    {% if teams %}
+    <a
+      href="{{ request.url_for('checkin_form', token='demo-alex') }}"
+      class="mt-4 inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+      >Try the demo check-in</a
+    >
+    {% endif %}
+  </article>
+  <article class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <h3 class="text-lg font-semibold text-slate-900">Admin control</h3>
+    <p class="mt-2 text-sm text-slate-600">
+      Create teams, upload rosters, and trigger reminders with a single admin token (set via <code>RMHT_ADMIN_TOKEN</code>). Swap SQLite for Postgres before launch and add billing with Stripe.
+    </p>
+    <a
+      href="{{ request.url_for('admin_portal') }}?token=changeme"
+      class="mt-4 inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+      >Review the admin flow</a
+    >
+  </article>
+</section>
+{% endblock %}
