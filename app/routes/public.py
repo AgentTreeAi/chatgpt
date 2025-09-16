@@ -62,9 +62,9 @@ def submit_checkin(
     token: str,
     mood: Annotated[int, Form(...)],
     stress: Annotated[int, Form(...)],
-    comment: Annotated[str | None, Form(default="")],
     request: Request,
     db: Annotated[Session, Depends(get_db)],
+    comment: Annotated[str | None, Form()] = "",
 ) -> HTMLResponse:
     hashed = hash_token(token)
     user = db.query(models.User).filter(models.User.anon_token_hash == hashed, models.User.active.is_(True)).first()

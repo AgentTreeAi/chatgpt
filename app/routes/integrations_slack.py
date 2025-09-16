@@ -86,13 +86,13 @@ def slack_callback(
     return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
 
 
-@router.post("/channel", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/channel", status_code=status.HTTP_200_OK)
 def update_channel(
     payload: SlackChannelPayload,
     session: dict = Depends(require_role("org_admin")),
     db: Session = Depends(get_db),
     _: None = Depends(require_csrf),
-) -> None:
+) -> dict[str, str]:
     integration = (
         db.query(models.Integration)
         .filter(models.Integration.org_id == session["org_id"], models.Integration.kind == models.IntegrationKind.slack)
@@ -104,6 +104,8 @@ def update_channel(
     integration.config_json["channel"] = payload.channel
     db.add(integration)
     db.commit()
+
+    return {"detail": "Slack channel updated"}
 
 
 @router.post("/test", status_code=status.HTTP_202_ACCEPTED)

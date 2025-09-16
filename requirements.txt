@@ -6,8 +6,10 @@ psycopg2-binary
 jinja2
 pydantic>=2.0
 pydantic-settings
+email-validator
 python-jose[cryptography]
 python-multipart
+itsdangerous>=2.1
 sendgrid
 stripe
 httpx
