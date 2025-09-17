@@ -38,6 +38,36 @@ uvicorn app.main:app --reload --port 8000
 
 Visit `http://localhost:8000/` for the marketing home, `/admin` for the org console (use the demo magic-link flow), and `/dashboard/1` for seeded analytics once the Postgres seed runs on startup.
 
+## Frontend SPA development
+
+The React single-page app lives in [`frontend/`](frontend/) and is built with Vite + Tailwind. It is served by FastAPI at `/app` in production.
+
+### Local development
+
+```bash
+# install dependencies
+npm --prefix frontend install
+
+# start the Vite dev server (http://localhost:5173)
+npm --prefix frontend run dev
+```
+
+The backend enables CORS for `http://localhost:5173` out of the box. If you need to expose a different origin (e.g., Replit preview URL), set `ALLOWED_CORS_ORIGINS` to a comma-separated list such as:
+
+```bash
+ALLOWED_CORS_ORIGINS="http://localhost:5173,https://<your-repl-username>.<your-repl-id>.repl.co"
+```
+
+### Build & publish the SPA
+
+```bash
+npm --prefix frontend ci
+npm --prefix frontend run build
+python scripts/prepare_frontend.py
+```
+
+The helper script copies the Vite `dist/` output into `app/web/dist`, which FastAPI serves at `/app`. Commit the generated assets when deploying via Replit or any environment that does not run the build step automatically.
+
 ### Database migration commands
 
 ```bash
