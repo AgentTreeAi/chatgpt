@@ -2,15 +2,16 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import List, Optional
+from typing import List, Optional, Literal
 
-from pydantic import AnyHttpUrl, Field
+from pydantic import AnyHttpUrl, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Runtime configuration loaded from environment variables."""
 
+    app_env: Literal["dev", "prod", "test"] = Field("dev", alias="APP_ENV")
     database_url: str = Field(..., alias="DATABASE_URL")
     secret_key: str = Field("dev-secret-key-change-in-production", alias="SECRET_KEY")
     admin_token: str = Field("changeme", alias="RMHT_ADMIN_TOKEN")
@@ -24,10 +25,40 @@ class Settings(BaseSettings):
     stripe_price_enterprise: Optional[str] = Field(None, alias="STRIPE_PRICE_ENTERPRISE")
     app_base_url: Optional[AnyHttpUrl] = Field(None, alias="APP_BASE_URL")
     cron_secret: Optional[str] = Field(None, alias="CRON_SECRET")
+    allowed_cors_origins: List[str] = Field(default_factory=list, alias="ALLOWED_CORS_ORIGINS")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 
-    allowed_cors_origins: List[str] = Field(default_factory=lambda: ["*"])
+    @field_validator("allowed_cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Parse CORS origins from CSV string or use default."""
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        elif isinstance(v, list):
+            return v
+        else:
+            return ["*"]  # Default for dev
+
+    @model_validator(mode="after")
+    def validate_production_config(self):
+        """Validate production configuration requirements."""
+        if self.app_env == "prod":
+            # Require strong secrets in production
+            if self.secret_key in ("dev-secret-key-change-in-production", ""):
+                raise ValueError("SECRET_KEY must be set to a strong value in production")
+            if self.admin_token in ("changeme", ""):
+                raise ValueError("RMHT_ADMIN_TOKEN must be set to a strong value in production")
+            
+            # Require explicit CORS origins in production
+            if not self.allowed_cors_origins or "*" in self.allowed_cors_origins:
+                raise ValueError("ALLOWED_CORS_ORIGINS must be explicitly set (no wildcards) in production")
+        
+        # Set default CORS for dev environments
+        if self.app_env != "prod" and not self.allowed_cors_origins:
+            self.allowed_cors_origins = ["*"]
+        
+        return self
 
 
 @lru_cache(maxsize=1)

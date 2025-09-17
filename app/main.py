@@ -27,12 +27,18 @@ logging.basicConfig(
 app = FastAPI(title="Remote-Team Mental Health Tracker", version="1.0.0")
 
 app.add_middleware(RequestIDMiddleware)
-app.add_middleware(SessionMiddleware, secret_key=settings.secret_key, https_only=False, max_age=60 * 60 * 24 * 7, same_site="lax")
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=settings.secret_key, 
+    https_only=(settings.app_env == "prod"), 
+    max_age=60 * 60 * 24 * 7, 
+    same_site="lax"
+)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_cors_origins,
-    allow_credentials=True,
+    allow_credentials=("*" not in settings.allowed_cors_origins),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -48,47 +54,50 @@ app.include_router(jobs.router)
 
 @app.on_event("startup")
 def ensure_seed_data() -> None:
-    """Create demo data for local development."""
+    """Create demo data for local development only."""
+    
+    # Only create tables and seed data in development
+    if settings.app_env != "prod":
+        Base.metadata.create_all(bind=engine)
+        
+        with SessionLocal() as session:
+            if session.query(models.Org).count():
+                return
 
-    Base.metadata.create_all(bind=engine)
-    with SessionLocal() as session:
-        if session.query(models.Org).count():
-            return
+            org = models.Org(name="Demo Org", allowed_domains=["example.com"])
+            session.add(org)
+            session.flush()
 
-        org = models.Org(name="Demo Org", allowed_domains=["example.com"])
-        session.add(org)
-        session.flush()
+            team = models.Team(org_id=org.id, name="Remote Success")
+            session.add(team)
+            session.flush()
 
-        team = models.Team(org_id=org.id, name="Remote Success")
-        session.add(team)
-        session.flush()
+            demo_token = "demo-token"
+            hashed = hashlib.sha256(demo_token.encode("utf-8")).hexdigest()
+            user = models.User(team_id=team.id, anon_token_hash=hashed, email="demo@example.com", role="team_lead")
+            session.add(user)
+            session.flush()
 
-        demo_token = "demo-token"
-        hashed = hashlib.sha256(demo_token.encode("utf-8")).hexdigest()
-        user = models.User(team_id=team.id, anon_token_hash=hashed, email="demo@example.com", role="team_lead")
-        session.add(user)
-        session.flush()
-
-        now = datetime.utcnow()
-        samples = [
-            (4, 2, "Feeling focused after maker time."),
-            (3, 3, "Juggling async updates across zones."),
-            (2, 4, "Need support to avoid burnout."),
-            (5, 2, "Recharge weekend helped a ton."),
-            (3, 4, "Meetings late in the day again."),
-        ]
-        for idx, (mood, stress, comment) in enumerate(samples):
-            session.add(
-                models.Checkin(
-                    user_id=user.id,
-                    team_id=team.id,
-                    mood=mood,
-                    stress=stress,
-                    comment=comment,
-                    submitted_at=now - timedelta(days=idx),
-                    checkin_date=(now - timedelta(days=idx)).date(),
+            now = datetime.utcnow()
+            samples = [
+                (4, 2, "Feeling focused after maker time."),
+                (3, 3, "Juggling async updates across zones."),
+                (2, 4, "Need support to avoid burnout."),
+                (5, 2, "Recharge weekend helped a ton."),
+                (3, 4, "Meetings late in the day again."),
+            ]
+            for idx, (mood, stress, comment) in enumerate(samples):
+                session.add(
+                    models.Checkin(
+                        user_id=user.id,
+                        team_id=team.id,
+                        mood=mood,
+                        stress=stress,
+                        comment=comment,
+                        submitted_at=now - timedelta(days=idx),
+                        checkin_date=(now - timedelta(days=idx)).date(),
+                    )
                 )
-            )
 
-        risk_service.upsert_risk_snapshot(session, team)
-        session.commit()
+            risk_service.upsert_risk_snapshot(session, team)
+            session.commit()
