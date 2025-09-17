@@ -7,6 +7,7 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.engine import make_url
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import get_settings
@@ -17,12 +18,13 @@ from app.db.session import SessionLocal, engine
 from app.routes import admin, auth, billing_stripe, health, integrations_slack, jobs, public
 from app.services import risk as risk_service
 
-settings = get_settings()
-
 logging.basicConfig(
     level=logging.INFO,
     format="{\"timestamp\":\"%(asctime)s\",\"level\":\"%(levelname)s\",\"message\":\"%(message)s\",\"logger\":\"%(name)s\"}",
 )
+
+settings = get_settings()
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Remote-Team Mental Health Tracker", version="1.0.0")
 
@@ -52,10 +54,34 @@ app.include_router(billing_stripe.router)
 app.include_router(jobs.router)
 
 
+def describe_database(url: str) -> str:
+    """Return a human-friendly description of the configured database."""
+
+    if url.startswith("sqlite"):
+        return f"SQLite ({url})"
+
+    try:
+        parsed = make_url(url)
+    except Exception:
+        return "Database URL configured"
+
+    return parsed.render_as_string(hide_password=True)
+
+
 @app.on_event("startup")
 def ensure_seed_data() -> None:
     """Create demo data for local development only."""
-    
+
+    logger.info("Starting RMHT application (env=%s)", settings.app_env)
+
+    try:
+        database_url = settings.resolved_database_url
+    except ValueError as exc:
+        logger.error("Database configuration error: %s", exc)
+        raise
+
+    logger.info("Using database %s", describe_database(database_url))
+
     # Only create tables and seed data in development
     if settings.app_env != "prod":
         Base.metadata.create_all(bind=engine)

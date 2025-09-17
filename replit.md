@@ -66,3 +66,11 @@ Preferred communication style: Simple, everyday language.
 ### Optional Services
 - **HRIS Integration**: Placeholder for employee roster synchronization
 - **Calendar Integration**: Placeholder for meeting utilization analytics
+
+## Replit deployment notes
+
+- Set `APP_ENV=dev`, `SECRET_KEY`, and `RMHT_ADMIN_TOKEN` in the Secrets panel.
+- Leave `DATABASE_URL` unset for development; the app will automatically create `rmht.db` using SQLite.
+- Provide `DATABASE_URL` and production-grade secrets when switching `APP_ENV` to `prod`.
+- Run `uvicorn app.main:app --host 0.0.0.0 --port 8000` to start the service.
+

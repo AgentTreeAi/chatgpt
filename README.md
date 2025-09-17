@@ -27,7 +27,7 @@ pip install -r requirements.txt
 
 # copy and edit environment
 cp .env.example .env
-# update DATABASE_URL, SECRET_KEY, etc.
+# update secrets as needed. DATABASE_URL is optional in dev and defaults to SQLite.
 
 # run migrations
 alembic upgrade head
@@ -59,7 +59,7 @@ python scripts/import_sqlite.py
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_URL` | Postgres connection string (`postgresql+psycopg2://...`) |
+| `DATABASE_URL` | Postgres connection string (`postgresql+psycopg2://...`). Optional when `APP_ENV=dev` (uses SQLite fallback). |
 | `SECRET_KEY` | HMAC secret for JWT magic links and sessions |
 | `RMHT_ADMIN_TOKEN` | Legacy token for scripting (admins now use magic links) |
 | `SENDGRID_API_KEY` | SendGrid API key for passwordless emails |
@@ -69,6 +69,7 @@ python scripts/import_sqlite.py
 | `STRIPE_PRICE_*` | Price IDs for Starter/Pro/Enterprise plans |
 | `APP_BASE_URL` | Public base URL used in links and Slack prompts |
 | `CRON_SECRET` | Shared secret for Railway cron job endpoints |
+| `SQLITE_DATABASE_PATH` | Override path for the dev SQLite fallback (defaults to `rmht.db`) |
 
 ## Key routes
 
