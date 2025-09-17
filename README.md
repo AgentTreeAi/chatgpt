@@ -29,7 +29,7 @@ pip install -r requirements.txt
 cp .env.example .env
 # update DATABASE_URL, SECRET_KEY, etc.
 
-# run migrations
+# run migrations (optional in dev; SQLite fallback auto-creates tables)
 alembic upgrade head
 
 # launch API
@@ -37,6 +37,38 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 Visit `http://localhost:8000/` for the marketing home, `/admin` for the org console (use the demo magic-link flow), and `/dashboard/1` for seeded analytics once the Postgres seed runs on startup.
+
+> **Note:** When `APP_ENV` is set to `development` (default) and `DATABASE_URL` is unset, the backend automatically falls back to a SQLite database stored at `rmht.db`. Production still requires an explicit `DATABASE_URL`.
+
+## Frontend SPA development
+
+The React single-page app lives in [`frontend/`](frontend/) and is built with Vite + Tailwind. It is served by FastAPI at `/app` in production.
+
+### Local development
+
+```bash
+# install dependencies
+npm --prefix frontend install
+
+# start the Vite dev server (http://localhost:5173)
+npm --prefix frontend run dev
+```
+
+The backend enables CORS for `http://localhost:5173` out of the box. If you need to expose a different origin (e.g., Replit preview URL), set `CORS_ALLOW_ORIGINS` to a comma-separated list such as:
+
+```bash
+CORS_ALLOW_ORIGINS="http://localhost:5173,https://<your-repl-username>.<your-repl-id>.repl.co"
+```
+
+### Build & publish the SPA
+
+```bash
+npm --prefix frontend ci
+npm --prefix frontend run build
+python scripts/prepare_frontend.py
+```
+
+The helper script copies the Vite `dist/` output into `app/web/dist`, which FastAPI serves at `/app`. Commit the generated assets when deploying via Replit or any environment that does not run the build step automatically.
 
 ### Database migration commands
 
@@ -59,9 +91,11 @@ python scripts/import_sqlite.py
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_URL` | Postgres connection string (`postgresql+psycopg2://...`) |
+| `APP_ENV` | `development` (default) or `production` |
+| `DATABASE_URL` | Postgres connection string; optional in dev (SQLite fallback) |
 | `SECRET_KEY` | HMAC secret for JWT magic links and sessions |
 | `RMHT_ADMIN_TOKEN` | Legacy token for scripting (admins now use magic links) |
+| `CORS_ALLOW_ORIGINS` | Comma-separated origins allowed for CORS |
 | `SENDGRID_API_KEY` | SendGrid API key for passwordless emails |
 | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | Slack OAuth credentials |
 | `STRIPE_SECRET_KEY` | Stripe API key (test mode) |
@@ -95,7 +129,7 @@ python scripts/import_sqlite.py
 
 ```bash
 ruff check .
-mypy app  # optional
+mypy app
 pytest
 ```
 
@@ -104,6 +138,24 @@ GitHub Actions (`.github/workflows/`) run lint, type-check, pytest, build, and R
 ## Deployment
 
 The provided Dockerfile builds a slim Uvicorn image running as a non-root user. Build & push via `docker buildx` or let GitHub Actions publish to GHCR. Deployments trigger `railway up --ci` when `RAILWAY_TOKEN` is configured.
+
+## Replit setup
+
+1. **Secrets:** Configure the following in the Replit Secrets panel (values shown are safe dev defaults—replace as needed):
+   - `APP_ENV=development`
+   - `SECRET_KEY=<generate a random 48+ character string>`
+   - `RMHT_ADMIN_TOKEN=<generate a random 24+ character string>`
+   - Optional: `DATABASE_URL=sqlite:///./rmht.db`
+   - Optional: `CORS_ALLOW_ORIGINS=http://localhost:5173,https://<your-replit-preview-host>`
+2. **Build the SPA (locally or in the Replit shell):**
+   ```bash
+   npm --prefix frontend ci
+   npm --prefix frontend run build
+   python scripts/prepare_frontend.py
+   ```
+3. **Run command:** `uvicorn app.main:app --host 0.0.0.0 --port 5000`
+
+The backend now boots without a `DATABASE_URL` in development, preventing crash loops during Replit cold starts, while production still enforces explicit Postgres credentials and strong secrets.
 
 ## Roadmap
 

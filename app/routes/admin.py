@@ -82,7 +82,7 @@ def create_team(
     session: dict = Depends(require_role("org_admin")),
     db: Session = Depends(get_db),
     _: None = Depends(require_csrf),
-) -> dict[str, int | str]:
+) -> dict[str, int | str | None]:
     exists = (
         db.query(models.Team)
         .filter(models.Team.org_id == session["org_id"], func.lower(models.Team.name) == payload.name.lower())
@@ -114,7 +114,7 @@ def create_user(
     session: dict = Depends(require_role("org_admin", "team_lead")),
     db: Session = Depends(get_db),
     _: None = Depends(require_csrf),
-) -> dict[str, int | str]:
+) -> dict[str, int | str | None]:
     if payload.role not in ALLOWED_ROLES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role")
 

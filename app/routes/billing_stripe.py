@@ -5,6 +5,7 @@ from __future__ import annotations
 import stripe
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -26,14 +27,13 @@ class PortalRequest(BaseModel):
     return_url: str
 
 
-@router.post("/checkout")
-def create_checkout(
-    payload: CheckoutRequest,
+def _create_checkout_session(
+    db: Session,
+    session: dict,
     request: Request,
-    session: dict = Depends(require_role("org_admin")),
-    db: Session = Depends(get_db),
-    _: None = Depends(require_csrf),
-) -> dict[str, str]:
+    plan: Plan,
+    seats: int,
+) -> str:
     settings = get_settings()
     base_url = settings.app_base_url or str(request.base_url).rstrip("/")
     success_url = f"{base_url}/admin"
@@ -42,8 +42,8 @@ def create_checkout(
     try:
         checkout_url = billing_service.create_checkout_session(
             org_id=session["org_id"],
-            plan=payload.plan,
-            quantity=payload.seats,
+            plan=plan,
+            quantity=max(seats, 1),
             success_url=success_url,
             cancel_url=cancel_url,
         )
@@ -56,13 +56,43 @@ def create_checkout(
         .one_or_none()
     )
     if not subscription:
-        subscription = models.Subscription(org_id=session["org_id"], plan=payload.plan)
-    subscription.plan = payload.plan
+        subscription = models.Subscription(org_id=session["org_id"], plan=plan)
+    subscription.plan = plan
     subscription.status = models.SubscriptionStatus.trialing
     db.add(subscription)
     db.commit()
 
+    return checkout_url
+
+
+@router.post("/checkout")
+def create_checkout(
+    payload: CheckoutRequest,
+    request: Request,
+    session: dict = Depends(require_role("org_admin")),
+    db: Session = Depends(get_db),
+    _: None = Depends(require_csrf),
+) -> dict[str, str]:
+    checkout_url = _create_checkout_session(db, session, request, payload.plan, payload.seats)
+
     return {"checkout_url": checkout_url}
+
+
+@router.get("/checkout")
+def checkout_redirect(
+    request: Request,
+    plan: str = "starter",
+    seats: int = 5,
+    session: dict = Depends(require_role("org_admin")),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    try:
+        plan_enum = Plan(plan.lower())
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid plan") from exc
+
+    checkout_url = _create_checkout_session(db, session, request, plan_enum, seats)
+    return RedirectResponse(url=checkout_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/portal")
