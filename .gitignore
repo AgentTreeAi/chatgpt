@@ -10,3 +10,5 @@ rmht.db
 alembic/versions/__pycache__/
 .pytest_cache/
 .DS_Store
+frontend/node_modules/
+frontend/dist/

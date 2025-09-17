@@ -35,10 +35,9 @@ class Settings(BaseSettings):
         """Parse CORS origins from CSV string or use default."""
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
-        elif isinstance(v, list):
+        if isinstance(v, list):
             return v
-        else:
-            return ["*"]  # Default for dev
+        return []
 
     @model_validator(mode="after")
     def validate_production_config(self):
@@ -55,8 +54,12 @@ class Settings(BaseSettings):
                 raise ValueError("ALLOWED_CORS_ORIGINS must be explicitly set (no wildcards) in production")
         
         # Set default CORS for dev environments
-        if self.app_env != "prod" and not self.allowed_cors_origins:
-            self.allowed_cors_origins = ["*"]
+        if self.app_env != "prod":
+            dev_defaults = ["http://localhost:5173", "http://127.0.0.1:5173"]
+            if not self.allowed_cors_origins:
+                self.allowed_cors_origins = dev_defaults
+            elif "*" in self.allowed_cors_origins:
+                self.allowed_cors_origins = dev_defaults
         
         return self
 

@@ -9,6 +9,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.security import create_token, decode_token, generate_csrf_token
 from app.db import models
 from app.dependencies import get_db
@@ -21,13 +22,12 @@ class MagicLinkRequest(BaseModel):
     email: EmailStr
 
 
-@router.post("/request-link", status_code=status.HTTP_202_ACCEPTED)
-def request_magic_link(
-    payload: MagicLinkRequest,
+def _issue_magic_link(
+    db: Session,
+    email: str,
     request: Request,
-    db: Session = Depends(get_db),
-) -> dict[str, str]:
-    email = payload.email.lower()
+) -> tuple[str, models.Org, models.User]:
+    email = email.lower()
     domain = email.split("@")[-1]
 
     org = db.query(models.Org).filter(models.Org.allowed_domains.contains([domain])).first()
@@ -47,9 +47,33 @@ def request_magic_link(
 
     callback_url = str(request.url_for("auth_callback"))
     link = f"{callback_url}?token={nonce_value}"
-    send_magic_link(email, link)
+    return link, org, user
+
+
+@router.post("/request-link", status_code=status.HTTP_202_ACCEPTED)
+def request_magic_link(
+    payload: MagicLinkRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    link, _, user = _issue_magic_link(db, payload.email, request)
+    send_magic_link(user.email or payload.email.lower(), link)
 
     return {"detail": "Magic link sent"}
+
+
+@router.post("/request-link-local", status_code=status.HTTP_200_OK)
+def request_magic_link_local(
+    payload: MagicLinkRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    settings = get_settings()
+    if settings.app_env == "prod":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not available in production")
+
+    link, _, _ = _issue_magic_link(db, payload.email, request)
+    return {"detail": "Magic link generated", "login_url": link}
 
 
 @router.get("/callback")

@@ -4,17 +4,29 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime, timedelta
 import logging
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.staticfiles import StaticFiles
 
 from app.core.config import get_settings
 from app.middleware import RequestIDMiddleware
 from app.db import models
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
-from app.routes import admin, auth, billing_stripe, health, integrations_slack, jobs, public
+from app.routes import (
+    admin,
+    auth,
+    billing_stripe,
+    health,
+    integrations_slack,
+    jobs,
+    public,
+    spa_api,
+)
 from app.services import risk as risk_service
 
 settings = get_settings()
@@ -50,6 +62,23 @@ app.include_router(admin.router)
 app.include_router(integrations_slack.router)
 app.include_router(billing_stripe.router)
 app.include_router(jobs.router)
+app.include_router(spa_api.router)
+
+
+dist_dir = Path(__file__).resolve().parent / "web" / "dist"
+if dist_dir.exists():
+    app.mount("/app/assets", StaticFiles(directory=dist_dir / "assets"), name="assets")
+
+    @app.get("/app", response_class=HTMLResponse)
+    @app.get("/app/", response_class=HTMLResponse)
+    async def serve_spa_root(request: Request) -> HTMLResponse:  # pragma: no cover - static serving
+        index_path = dist_dir / "index.html"
+        return HTMLResponse(index_path.read_text(encoding="utf-8"))
+
+    @app.get("/app/{full_path:path}", response_class=HTMLResponse)
+    async def spa_catch_all(full_path: str, request: Request) -> HTMLResponse:  # pragma: no cover - static serving
+        index_path = dist_dir / "index.html"
+        return HTMLResponse(index_path.read_text(encoding="utf-8"))
 
 
 @app.on_event("startup")
