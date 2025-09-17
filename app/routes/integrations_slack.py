@@ -24,6 +24,11 @@ class SlackChannelPayload(BaseModel):
     channel: str = Field(..., min_length=1)
 
 
+class SlackTestPayload(BaseModel):
+    channel: str | None = Field(default=None, min_length=1)
+    message: str | None = Field(default=None, max_length=240)
+
+
 @router.get("/install")
 def start_install(
     request: Request,
@@ -43,6 +48,16 @@ def start_install(
     }
     url = "https://slack.com/oauth/v2/authorize?" + urlencode(params)
     return RedirectResponse(url=url)
+
+
+@router.get("/start-install")
+def start_install_alias(
+    request: Request,
+    session: dict = Depends(require_role("org_admin")),
+) -> RedirectResponse:
+    """Alias route expected by the SPA."""
+
+    return start_install(request, session)
 
 
 @router.get("/oauth/callback")
@@ -110,6 +125,7 @@ def update_channel(
 
 @router.post("/test", status_code=status.HTTP_202_ACCEPTED)
 def send_test_message(
+    payload: SlackTestPayload | None,
     session: dict = Depends(require_role("org_admin")),
     db: Session = Depends(get_db),
     _: None = Depends(require_csrf),
@@ -123,12 +139,15 @@ def send_test_message(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slack integration not installed")
 
     token = integration.config_json.get("bot_token")
-    channel = integration.config_json.get("channel")
+    channel_override = (payload.channel.strip() if payload and payload.channel else None)
+    channel = channel_override or integration.config_json.get("channel")
     if not token or not channel:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Slack channel not configured")
 
-    ok = slack_service.post_message(token, channel, "Test message from RMHT")
+    message = payload.message.strip() if payload and payload.message else "Test message from RMHT"
+
+    ok = slack_service.post_message(token, channel, message)
     if not ok:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to post to Slack")
 
-    return {"detail": "Test message sent"}
+    return {"detail": f"Test message sent to {channel}"}

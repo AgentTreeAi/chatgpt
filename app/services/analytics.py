@@ -11,7 +11,7 @@ from app.db.models import Checkin, RiskSnapshot, Team
 MINIMUM_RESPONDENTS = 5
 
 
-def team_metrics(db: Session, team: Team) -> dict[str, float | int | None | bool]:
+def team_metrics(db: Session, team: Team) -> dict[str, float | int | str | None | bool]:
     """Compute aggregated team metrics enforcing anonymity thresholds."""
 
     cutoff = date.today() - timedelta(days=30)
