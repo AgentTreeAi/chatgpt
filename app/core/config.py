@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     """Runtime configuration loaded from environment variables."""
 
     database_url: str = Field(..., alias="DATABASE_URL")
-    secret_key: str = Field(..., alias="SECRET_KEY")
+    secret_key: str = Field("dev-secret-key-change-in-production", alias="SECRET_KEY")
     admin_token: str = Field("changeme", alias="RMHT_ADMIN_TOKEN")
     sendgrid_api_key: Optional[str] = Field(None, alias="SENDGRID_API_KEY")
     slack_client_id: Optional[str] = Field(None, alias="SLACK_CLIENT_ID")
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 
-    allowed_cors_origins: List[AnyHttpUrl] = Field(default_factory=list)
+    allowed_cors_origins: List[str] = Field(default_factory=lambda: ["*"])
 
 
 @lru_cache(maxsize=1)

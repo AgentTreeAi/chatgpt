@@ -29,14 +29,13 @@ app = FastAPI(title="Remote-Team Mental Health Tracker", version="1.0.0")
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(SessionMiddleware, secret_key=settings.secret_key, https_only=False, max_age=60 * 60 * 24 * 7, same_site="lax")
 
-if settings.allowed_cors_origins:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.allowed_cors_origins],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(public.router)
 app.include_router(health.router)
