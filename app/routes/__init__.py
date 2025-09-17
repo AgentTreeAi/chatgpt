@@ -1,5 +1,5 @@
 """Route modules for FastAPI app."""
-from . import admin, auth, billing_stripe, health, integrations_slack, jobs, public
+from . import admin, auth, billing_stripe, health, integrations_slack, jobs, public, spa_api
 
 __all__ = [
     "admin",
@@ -9,4 +9,5 @@ __all__ = [
     "integrations_slack",
     "jobs",
     "public",
+    "spa_api",
 ]
