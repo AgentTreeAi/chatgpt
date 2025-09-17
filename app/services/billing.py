@@ -4,6 +4,8 @@ from __future__ import annotations
 import logging
 
 import stripe
+from typing import cast
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -28,9 +30,9 @@ def _price_for_plan(plan: Plan) -> str:
         Plan.enterprise: settings.stripe_price_enterprise,
     }
     price = mapping.get(plan)
-    if not price:
+    if price is None or price == "":
         raise RuntimeError(f"No Stripe price ID configured for {plan.value}")
-    return price
+    return cast(str, price)
 
 
 def create_checkout_session(org_id: int, plan: Plan, quantity: int, success_url: str, cancel_url: str) -> str:
@@ -47,13 +49,19 @@ def create_checkout_session(org_id: int, plan: Plan, quantity: int, success_url:
         },
         metadata={"org_id": str(org_id)},
     )
-    return session.url
+    url = session.url
+    if not url:
+        raise RuntimeError("Stripe checkout session did not include a URL")
+    return str(url)
 
 
 def create_billing_portal(stripe_customer: str, return_url: str) -> str:
     _configure_stripe()
     portal = stripe.billing_portal.Session.create(customer=stripe_customer, return_url=return_url)
-    return portal.url
+    url = portal.url
+    if not url:
+        raise RuntimeError("Stripe billing portal session did not include a URL")
+    return str(url)
 
 
 def update_subscription_from_event(db: Session, event: stripe.Event) -> None:
